@@ -14,8 +14,6 @@ const (
 	JWTContextKey = "JWTContextKey"
 )
 
-var JwtSigningKeys map[string]string
-
 func Claims(value interface{}) map[string]interface{} {
 	switch v := value.(type) {
 	case *echo.Context:
@@ -25,9 +23,10 @@ func Claims(value interface{}) map[string]interface{} {
 	}
 }
 
+type JWTKeyFunc func(c *echo.Context) (string, error)
+
 // A JSON Web Token middleware
-func EchoJWTAuther(keys map[string]string) echo.HandlerFunc {
-	JwtSigningKeys = keys
+func EchoJWTAuther(keyFunc JWTKeyFunc) echo.HandlerFunc {
 	return func(c *echo.Context) error {
 
 		// Skip WebSocket
@@ -37,15 +36,9 @@ func EchoJWTAuther(keys map[string]string) echo.HandlerFunc {
 
 		he := echo.NewHTTPError(http.StatusUnauthorized)
 
-		// add client-x to find signingkey
-		clientId := c.Request().Header.Get("client-id")
-		if len(clientId) == 0 {
-			return he
-		}
-
-		key, ok := JwtSigningKeys[clientId]
-		if !ok {
-			return he
+		key, err := keyFunc(c)
+		if err != nil {
+			return err
 		}
 
 		auth := c.Request().Header.Get("Authorization")
