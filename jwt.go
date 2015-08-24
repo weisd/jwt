@@ -1,8 +1,9 @@
 package jwt
 
 import (
+	"errors"
 	"fmt"
-	"net/http"
+	// "net/http"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
@@ -13,6 +14,8 @@ const (
 	Bearer        = "Bearer"
 	JWTContextKey = "JWTContextKey"
 )
+
+var UnauthorizedErr = errors.New("JWT Authorization Failed")
 
 func Claims(value interface{}) map[string]interface{} {
 	switch v := value.(type) {
@@ -34,11 +37,12 @@ func EchoJWTAuther(keyFunc JWTKeyFunc) echo.HandlerFunc {
 			return nil
 		}
 
-		he := echo.NewHTTPError(http.StatusUnauthorized)
+		// he := echo.NewHTTPError(http.StatusUnauthorized)
+		he := UnauthorizedErr
 
 		key, err := keyFunc(c)
 		if err != nil {
-			return err
+			return he
 		}
 
 		auth := c.Request().Header.Get("Authorization")
